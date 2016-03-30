@@ -1,0 +1,58 @@
+<launch>
+  <env name="ROSCONSOLE_FORMAT" value="${time} ${logger}: [${severity}] ${message}"/>
+
+  <arg name="log_output" default="screen"/>
+
+  <!-- <arg name="px4_path" default="$(find px4)"/> -->
+  <arg name="px4_path" default="/opt/px4/px4"/>
+  <arg name="px4_config" default="share/gazebo_explorer.config"/>
+  <arg name="explorer_model" default="explorer_base_mavlink.urdf"/>
+
+  <arg name="paused" default="false"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="extra_gazebo_args" default=""/>
+  <arg name="gui" default="true"/>
+  <arg name="headless" default="false"/>
+  <arg name="debug" default="false"/>
+  <arg name="physics" default="ode"/>
+  <arg name="verbose" default="false"/>
+  <arg name="world_name" default="worlds/rockyard.world"/>
+
+  <!-- first ip:port is px4, second ip:port is ... -->
+  <arg name="fcu_url" default="udp://127.0.0.1:14550@127.0.0.1:14556"/>
+  <arg name="tgt_system" default="1" />
+  <arg name="tgt_component" default="1" />
+  <arg name="pluginlists_yaml" default="$(find mavros)/launch/px4_pluginlists.yaml" />
+  <arg name="config_yaml" default="$(find mavros)/launch/px4_config.yaml" />
+
+  <!-- first ip:port is ..., second ip:port is qgc -->
+  <!-- <arg name="gcs_url" default="udp://127.0.0.1:14570@127.0.0.1:14575"/> -->
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+    <arg name="extra_gazebo_args" value="$(arg extra_gazebo_args)"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="headless" value="$(arg headless)"/>
+    <arg name="debug" value="$(arg debug)"/>
+    <arg name="physics" value="$(arg physics)"/>
+    <arg name="verbose" value="$(arg verbose)"/>
+    <arg name="world_name" value="$(arg world_name)"/>
+  </include>
+
+  <node name="px4" pkg="evae_deploy" type="px4_launcher" required="true" args="$(arg px4_path) $(find evae_gazebo)/$(arg px4_config) --" output="$(arg log_output)"/>
+
+  <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" args="-urdf -model explorer -file $(find evae_description)/model/urdf/$(arg explorer_model)" output="$(arg log_output)"/>
+
+  <node name="mavros" pkg="mavros" type="mavros_node" required="true" clear_params="true" output="$(arg log_output)">
+    <param name="fcu_url" value="$(arg fcu_url)" />
+    <param name="gcs_url" value="" />
+    <param name="target_system_id" value="$(arg tgt_system)" />
+    <param name="target_component_id" value="$(arg tgt_component)" />
+    <rosparam command="load" file="$(arg pluginlists_yaml)" />
+    <rosparam command="load" file="$(arg config_yaml)" />
+  </node>
+
+  <node name="copilot" pkg="evae_controllers" type="copilot" required="false" clear_params="true" output="$(arg log_output)"/>
+
+</launch>
